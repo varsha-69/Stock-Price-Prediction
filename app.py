@@ -51,7 +51,7 @@ ticker_input = st.sidebar.text_input("Enter Ticker(s) (comma-separated)", value=
 tickers = [t.strip().upper() for t in ticker_input.split(',') if t.strip()]
 
 start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime("2010-01-01"))
-end_date = st.sidebar.date_input("End Date", value=pd.to_datetime("2023-01-01"))
+end_date = st.sidebar.date_input("End Date", value=pd.to_datetime("2023-01-01"),max_value=date.today())
 
 predict_days = st.sidebar.slider("🔮 Days to Predict", 1, 30, 7)
 sequence_length = 60
