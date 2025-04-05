@@ -39,7 +39,7 @@ from sklearn.model_selection import train_test_split
 
 st.set_page_config(page_title="📈 Modular LSTM Stock Predictor", layout="wide")
 
-st.title("📊 Stock Price Predictor with LSTM")
+st.title("📊 Stock Price Predictor")
 st.markdown("Built using Streamlit, Bidirectional LSTM, and Technical Indicators")
 
 # ---------------- Sidebar ----------------
