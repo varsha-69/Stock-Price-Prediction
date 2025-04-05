@@ -1,30 +1,4 @@
-import streamlit as st
 import base64
-
-def set_background_color(dark_mode):
-    if dark_mode:
-        st.markdown(
-            """
-            <style>
-            body {
-                background-color: #0E1117;
-                color: #FAFAFA;
-            }
-            </style>
-            """, unsafe_allow_html=True
-        )
-    else:
-        st.markdown(
-            """
-            <style>
-            body {
-                background-color: #FFFFFF;
-                color: #000000;
-            }
-            </style>
-            """, unsafe_allow_html=True
-        )
-
 import streamlit as st
 import pandas as pd
 from datetime import date
@@ -43,10 +17,6 @@ st.title("📊 Stock Price Predictor")
 st.markdown("Built using Streamlit, Bidirectional LSTM, and Technical Indicators")
 
 # ---------------- Sidebar ----------------
-dark_mode = st.sidebar.toggle("🌗 Dark Mode", value=True)
-set_background_color(dark_mode)
-st.sidebar.header("🔧 Configuration")
-
 ticker_input = st.sidebar.text_input("Enter Ticker(s) (comma-separated)", value="AAPL")
 tickers = [t.strip().upper() for t in ticker_input.split(',') if t.strip()]
 
