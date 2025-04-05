@@ -1,81 +1,126 @@
 import streamlit as st
+import base64
+
+def set_background_color(dark_mode):
+    if dark_mode:
+        st.markdown(
+            """
+            <style>
+            body {
+                background-color: #0E1117;
+                color: #FAFAFA;
+            }
+            </style>
+            """, unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            """
+            <style>
+            body {
+                background-color: #FFFFFF;
+                color: #000000;
+            }
+            </style>
+            """, unsafe_allow_html=True
+        )
+
+import streamlit as st
 import pandas as pd
+from datetime import date
+
+from helpers.data_loader import load_stock_data, load_multiple_stocks
+from helpers.indicators import compute_rsi, compute_macd
+from helpers.model import scale_data, create_sequences, build_model, predict_future
+from helpers.utils import plot_predictions, plot_rsi_macd, build_future_df
+
 import numpy as np
-from keras.api.models import load_model
-import matplotlib.pyplot as plt
-import yfinance as yf
+from sklearn.model_selection import train_test_split
 
-st.title("Stock Price Predictor App")
+st.set_page_config(page_title="📈 Modular LSTM Stock Predictor", layout="wide")
 
-stock = st.text_input("Enter the Stock ID", "GOOG")
+st.title("📊 Stock Price Predictor with LSTM")
+st.markdown("Built using Streamlit, Bidirectional LSTM, and Technical Indicators")
 
-from datetime import datetime
-end = datetime.now()
-start = datetime(end.year-20,end.month,end.day)
+# ---------------- Sidebar ----------------
+dark_mode = st.sidebar.toggle("🌗 Dark Mode", value=True)
+set_background_color(dark_mode)
+st.sidebar.header("🔧 Configuration")
 
-google_data = yf.download(stock, start, end)
+ticker_input = st.sidebar.text_input("Enter Ticker(s) (comma-separated)", value="AAPL")
+tickers = [t.strip().upper() for t in ticker_input.split(',') if t.strip()]
 
-model = load_model("Latest_stock_price_model.keras")
-st.subheader("Stock Data")
-st.write(google_data)
+start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime("2010-01-01"))
+end_date = st.sidebar.date_input("End Date", value=pd.to_datetime("2023-01-01"))
 
-splitting_len = int(len(google_data)*0.7)
-x_test = pd.DataFrame(google_data.Close[splitting_len:])
+predict_days = st.sidebar.slider("🔮 Days to Predict", 1, 30, 7)
+sequence_length = 60
 
-def plot_graph(figsize, values, full_data, extra_data = 0, extra_dataset = None):
-    fig = plt.figure(figsize=figsize)
-    plt.plot(values,'Orange')
-    plt.plot(full_data.Close, 'b')
-    if extra_data:
-        plt.plot(extra_dataset)
-    return fig
+# ---------------- Load & Display Data ----------------
+if tickers:
+    if len(tickers) == 1:
+        df = load_stock_data(tickers[0], start_date, end_date)
+        st.subheader(f"📁 Data Preview for {tickers[0]}")
+        st.dataframe(df.tail())
 
-st.subheader('Original Close Price and MA for 250 days')
-google_data['MA_for_250_days'] = google_data.Close.rolling(250).mean()
-st.pyplot(plot_graph((15,6), google_data['MA_for_250_days'],google_data,0))
+        # Indicators
+        df = compute_rsi(df)
+        df = compute_macd(df)
 
-st.subheader('Original Close Price and MA for 200 days')
-google_data['MA_for_200_days'] = google_data.Close.rolling(200).mean()
-st.pyplot(plot_graph((15,6), google_data['MA_for_200_days'],google_data,0))
+        st.subheader("📈 Technical Indicators")
+        st.pyplot(plot_rsi_macd(df))
 
-st.subheader('Original Close Price and MA for 100 days')
-google_data['MA_for_100_days'] = google_data.Close.rolling(100).mean()
-st.pyplot(plot_graph((15,6), google_data['MA_for_100_days'],google_data,0))
+        # LSTM PREP
+        data = df[['Close']]
+        scaled_data, scaler = scale_data(data.values)
+        x, y = create_sequences(scaled_data, seq_len=sequence_length)
 
-st.subheader('Original Close Price and MA for 100 days and MA for 250 days')
-st.pyplot(plot_graph((15,6), google_data['MA_for_100_days'],google_data,1,google_data['MA_for_250_days']))
+        # Split manually
+        split = int(len(x) * 0.8)
+        x_train, x_test = x[:split], x[split:]
+        y_train, y_test = y[:split], y[split:]
 
-from sklearn.preprocessing import MinMaxScaler
+        x_train = x_train.reshape((-1, sequence_length, 1))
+        x_test = x_test.reshape((-1, sequence_length, 1))
 
-scaler = MinMaxScaler(feature_range=(0,1))
-scaled_data = scaler.fit_transform(x_test[['Close']])
+        # Build & Train Model
+        model = build_model((x_train.shape[1], 1))
+        with st.spinner("🔁 Training LSTM model..."):
+            model.fit(x_train, y_train, epochs=5, batch_size=64, verbose=0)
 
-x_data = []
-y_data = []
+        # Predict on test
+        predictions = model.predict(x_test)
+        predictions = scaler.inverse_transform(predictions.reshape(-1, 1))
+        actual = scaler.inverse_transform(y_test.reshape(-1, 1))
 
-for i in range(100,len(scaled_data)):
-    x_data.append(scaled_data[i-100:i])
-    y_data.append(scaled_data[i])
+        valid = df.iloc[-len(predictions):].copy()
+        valid['Predictions'] = predictions
 
-x_data, y_data = np.array(x_data), np.array(y_data)
+        train = df.iloc[:len(df) - len(predictions)].copy()
 
-predictions = model.predict(x_data)
+        st.subheader("📊 Model Prediction vs Actual")
+        st.pyplot(plot_predictions(train, valid))
 
-inv_pre = scaler.inverse_transform(predictions)
-inv_y_test = scaler.inverse_transform(y_data)
+        # Future Prediction
+        last_60 = scaled_data[-sequence_length:]
+        future_preds = predict_future(model, last_60, predict_days, scaler)
+        future_df = build_future_df(df['Date'].iloc[-1], future_preds)
 
-ploting_data = pd.DataFrame(
- {
-  'original_test_data': inv_y_test.reshape(-1),
-    'predictions': inv_pre.reshape(-1)
- } ,
-    index = google_data.index[splitting_len+100:]
-)
-st.subheader("Original values vs Predicted values")
-st.write(ploting_data)
+        st.subheader(f"🔮 {predict_days}-Day Forecast")
+        st.dataframe(future_df)
 
-st.subheader('Original Close Price vs Predicted Close price')
-fig = plt.figure(figsize=(15,6))
-plt.plot(pd.concat([google_data.Close[:splitting_len+100],ploting_data], axis=0))
-plt.legend(["Data- not used", "Original Test data", "Predicted Test data"])
-st.pyplot(fig)
+        st.download_button("⬇️ Download Forecast CSV", data=future_df.to_csv(index=False).encode(),
+                           file_name=f"{tickers[0]}_forecast.csv", mime='text/csv')
+
+    elif len(tickers) > 1:
+        st.subheader("📊 Multi-Stock Price Comparison")
+        all_data = load_multiple_stocks(tickers, start_date, end_date)
+
+        close_prices = pd.DataFrame()
+        for ticker, df in all_data.items():
+            df.set_index('Date', inplace=True)
+            close_prices[ticker] = df['Close']
+
+        st.line_chart(close_prices)
+else:
+    st.info("👈 Enter at least one ticker to get started!")
