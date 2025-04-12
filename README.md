@@ -8,10 +8,12 @@ As a dynamic website, it updates and adapts continuously based on real-time mark
 ## 🛠️ Tech Stack
 For the successful implementation of our project, we have used a combination of software tools, libraries, and suitable hardware resources. 
 
-| Layer         | Tools Used                        |
-|---------------|-----------------------------------|
-| Backend       | Python, Pandas, NumPy             |
-| ML Model      | Scikit-learn (Linear Regression / LSTM / etc.) |
-| Data Source   | yFinance API                      |
-| Visualization | Matplotlib, Plotly                |
-| Deployment    | Streamlit                         |
+| Technologies    | Tools /    Libraries                                        |
+|-----------------|-------------------------------------------------------------|
+| Frontend        | Streamlit                                                   |
+| Backend         | Python                                                      |
+| ML Model        | Scikit-learn (Linear Regression / LSTM / etc.),TensorFlow   |
+| Data Collection | yFinance API                                                |
+| Data Processing | NumPy, Pandas                                               |
+| Visualization   | Matplotlib, Plotly                                          |
+| Deployment      | Streamlit  Cloud                                            |
