@@ -17,7 +17,7 @@ st.title("📊 Stock Price Predictor")
 st.markdown("Built using Streamlit, Bidirectional LSTM, and Technical Indicators")
 
 # ---------------- Sidebar ----------------
-ticker_input = st.sidebar.text_input("Enter Ticker(s) (comma-separated)", value="AAPL")
+ticker_input = st.sidebar.text_input("Enter Ticker(s) (comma-separated)", value=None)
 tickers = [t.strip().upper() for t in ticker_input.split(',') if t.strip()]
 
 start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime("2010-01-01"))
