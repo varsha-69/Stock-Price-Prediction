@@ -20,7 +20,7 @@ st.markdown("Built using Streamlit, Bidirectional LSTM, and Technical Indicators
 ticker_input = st.sidebar.text_input("Enter Ticker(s) (comma-separated)", value="AAPL")
 tickers = [t.strip().upper() for t in ticker_input.split(',') if t.strip()]
 
-start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime("2010-01-01"))
+start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime(date.today().replace(year=date.today().year - 10)))
 end_date = st.sidebar.date_input("End Date", value=pd.to_datetime(date.today()),max_value=date.today())
 
 predict_days = st.sidebar.slider("🔮 Days to Predict", 1, 30, 7)
